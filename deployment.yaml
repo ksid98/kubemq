@@ -1,0 +1,29 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kubemq-publlisher
+  labels:
+    app: kubemq-pub
+spec:
+  replicas: 100
+  selector:
+    matchLabels:
+      app: kubemq-pub
+  template:
+    metadata:
+      labels:
+        app: kubemq-pub
+    spec:
+      containers:
+      - name: kubemq-pub
+        image: ghcr.io/ksid98/kubemq-pub:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 50000
+        env:
+          - name: MY_POD_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.name
+      imagePullSecrets: 
+        - name: regcred
