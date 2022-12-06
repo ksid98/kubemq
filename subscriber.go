@@ -5,7 +5,6 @@ import (
    "github.com/kubemq-io/kubemq-go"
    "net/http"
    "log"
-//    "time"
    "fmt"
 )
 
@@ -21,10 +20,10 @@ func getTime(w http.ResponseWriter, r *http.Request) {
     defer cancel()
     client, err := kubemq.NewClient(ctx,
       kubemq.WithAddress("localhost", 50000),
-      kubemq.WithClientId("test-queue-client-id2"),
+      kubemq.WithClientId("test-queue-client-id"),
       kubemq.WithTransportType(kubemq.TransportTypeGRPC))
     if err != nil {
-      log.Fatal(err)
+        log.Fatal(err)
     }
     defer client.Close()
     channel := "lambda-test"
@@ -38,14 +37,11 @@ func getTime(w http.ResponseWriter, r *http.Request) {
        if err != nil {
            log.Fatal(err)
        }
-       for _, msg := range receiveResult.Messages {
+        for _, msg := range receiveResult.Messages {
             if msgChan != nil {
 		        msgChan <- string(msg.Body)
-// 		        log.Println(msg.Body)
 		    }
-//             time.Sleep(500*time.Millisecond)
-       }
-
+        }
     }
 }
 
@@ -78,12 +74,11 @@ func sseHandler(w http.ResponseWriter, r *http.Request) {
 			fmt.Fprintf(w, "data: %s\n\n", message)
 			flusher.Flush()
 		case <- r.Context().Done():
-				fmt.Println("Client closed connection")
-				fmt.Println(count)
-				return
+            fmt.Println("Client closed connection")
+            fmt.Println(count)
+            return
 		}
 	}
-
 }
 
 func main() {

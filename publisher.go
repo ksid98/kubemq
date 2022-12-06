@@ -9,9 +9,9 @@ import (
    "strings"
    "math/rand"
    "fmt"
-   "strconv"
-   "bytes"
-   "encoding/gob"
+   "encoding/json"
+    "sync"
+    "strconv"
 )
 
 
@@ -54,8 +54,12 @@ func get_job_task_id() string {
 }
 
 func main() {
-    for i := 0; i < 10; i++ {
-//         go func() {
+        var wg sync.WaitGroup
+    for i := 0; i < 200; i++ {
+    // Add one to the WaitGroup counter to indicate that we are starting one goroutine
+         wg.Add(1)
+         go func() {
+            for i:=0; i < 5; i++ {
             type Payload struct {
                 Job_id string
                 Chunk string
@@ -64,16 +68,21 @@ func main() {
             }
             p := new(Payload)
             p.Job_id = get_job_task_id()
-
-            for i:=0; i<7; i++{
+            lim := 6
+            for i:=0; i<lim; i++{
 
                 p.Task_id = get_job_task_id()
-                p.Chunk = strings.Join([]string{"chunk",strconv.Itoa(rand.Intn(6)),".log"},"")
+                p.Chunk = strings.Join([]string{"chunk",strconv.Itoa(i),".log"},"")
+                p.Status="In Progress"
+                if i == lim-1 {
+                    p.Status = "Completed"
+                }
 
 
                 ctx, cancel := context.WithCancel(context.Background())
                 defer cancel()
                 client, err := kubemq.NewClient(ctx,
+                   //kubemq.WithAddress("kubemq-cluster-grpc.kubemq.svc.cluster.local", 50000),
                    kubemq.WithAddress("localhost", 50000),
                    kubemq.WithClientId("test-command-client-id"),
                    kubemq.WithTransportType(kubemq.TransportTypeGRPC))
@@ -81,26 +90,20 @@ func main() {
                   log.Fatal(err)
                 }
                 defer client.Close()
-                channel := "hello-world-queue"
-                var buf bytes.Buffer
-                enc := gob.NewEncoder(&buf)
-                err_ := enc.Encode(p)
-                if err_ != nil{
-                    sendResult, err := client.NewQueueMessage().
+                channel := "lambda-test"
+                jsonStr, err := json.Marshal(p)
+                sendResult, err := client.NewQueueMessage().
                     SetChannel(channel).
-                    SetBody(buf.Bytes()).
+                    SetBody([]byte(jsonStr)).
                     Send(ctx)
                     if err != nil {
                         log.Fatal(err)
                     }
                     fmt.Printf("Send to Queue Result: MessageID:%s,Sent At: %s, Message: %s\n", sendResult.MessageID, time.Unix(0, sendResult.SentAt).String(), sendResult)
-                }
-//                 fmt.Println(buf.Bytes())
-
-
             }
-
-
-//         }()
+            defer wg.Done()
+            }
+         }()
     }
+    wg.Wait()
 }
