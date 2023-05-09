@@ -1,4 +1,4 @@
 grpcio>=1.27.2
-protobuf==4.22.0
+protobuf==4.23.0
 PyJWT>=1.7.1
 setuptools>=40.8.0
